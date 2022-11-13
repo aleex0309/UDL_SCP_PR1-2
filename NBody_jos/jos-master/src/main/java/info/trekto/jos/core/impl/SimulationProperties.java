@@ -38,7 +38,7 @@ public class SimulationProperties {
 
     private List<SimulationObject> initialObjects;
 
-    private int NumberOfThreads=1;
+    private static int NumberOfThreads=1;
 
     public SimulationProperties() {
     }
@@ -216,7 +216,8 @@ public class SimulationProperties {
         this.NumberOfThreads = threads;
     }
 
-    public int getNumberOfThreads(){
-        return this.NumberOfThreads;
+    public static int getNumberOfThreads(){
+        return NumberOfThreads;
     }
+
 }

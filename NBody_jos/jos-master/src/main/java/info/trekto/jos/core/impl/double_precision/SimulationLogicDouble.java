@@ -2,6 +2,7 @@ package info.trekto.jos.core.impl.double_precision;
 
 import com.aparapi.Kernel;
 import info.trekto.jos.core.SimulationLogic;
+import info.trekto.jos.core.impl.SimulationProperties;
 import info.trekto.jos.core.model.SimulationObject;
 import info.trekto.jos.core.model.impl.TripleNumber;
 import info.trekto.jos.core.numbers.New;
@@ -76,7 +77,7 @@ public class SimulationLogicDouble extends Kernel implements SimulationLogic {
         readOnlyRadius = new double[n];
         readOnlyColor = new int[n];
         readOnlyDeleted = new boolean[n];
-        
+
         this.screenWidth = screenWidth;
         this.screenHeight = screenHeight;
         this.mergeOnCollision = mergeOnCollision;
@@ -85,7 +86,7 @@ public class SimulationLogicDouble extends Kernel implements SimulationLogic {
 
     @Override
     public void run() {
-        calculateNewValues(getGlobalId());
+        calculateAllNewValues();
     }
 
     /**
@@ -134,11 +135,11 @@ public class SimulationLogicDouble extends Kernel implements SimulationLogic {
              * and these accelerations are applied for time T. */
             velocityX[i] = velocityX[i] + accelerationX[i] * secondsPerIteration;
             velocityY[i] = velocityY[i] + accelerationY[i] * secondsPerIteration;
-            
+
             /* Change the acceleration */
             accelerationX[i] = newAccelerationX;
             accelerationY[i] = newAccelerationY;
-            
+
             /* Bounce from screen borders */
             if (screenWidth != 0 && screenHeight != 0) {
                 bounceFromScreenBorders(i);
@@ -146,9 +147,59 @@ public class SimulationLogicDouble extends Kernel implements SimulationLogic {
         }
     }
 
+    public class CalculateThread extends Thread{
+        public CalculateThread(int start, int end) {
+            this.start = start;
+            this.end = end;
+        }
+        int start;
+        int end;
+
+        @Override
+        public void run(){
+            for(int i = start; i < end; i++){
+                calculateNewValues(i);
+            }
+        }
+
+    }
+
     public void calculateAllNewValues() {
-        for (int i = 0; i < positionX.length; i++)
-            calculateNewValues(i);
+        SimulationProperties simulation = new SimulationProperties();
+        int numberOfThreads = simulation.getNumberOfThreads();
+
+        //System.out.println("Number of threads: " + numberOfThreads);
+
+        int particlesPerThread = positionX.length / numberOfThreads;
+        int particlesLeft = positionX.length % numberOfThreads;
+
+
+        CalculateThread[] threads = new CalculateThread[numberOfThreads];
+
+        int start = 0;
+        int end = particlesPerThread;
+
+        for (int i= 0; i < numberOfThreads ; i++){
+
+            if(particlesLeft > 0){
+                end++;
+                particlesLeft--;
+            }
+
+            threads[i] = new CalculateThread(start, end);
+            threads[i].start();
+
+            start = end;
+            end = start + particlesPerThread;
+        }
+
+        for(int i = 0 ; i < numberOfThreads ; i++){
+            try {
+                threads[i].join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private void bounceFromScreenBorders(int i) {
@@ -324,21 +375,21 @@ public class SimulationLogicDouble extends Kernel implements SimulationLogic {
         }
         return Math.cbrt(volume / (RATIO_FOUR_THREE * PI));
     }
-    
+
     private void processTwoDimensionalCollision(int o1, int o2, double cor) {
         double v1x = velocityX[o1];
         double v1y = velocityY[o1];
         double v2x = velocityX[o2];
         double v2y = velocityY[o2];
-        
+
         double o1x = positionX[o1];
         double o1y = positionY[o1];
         double o2x = positionX[o2];
         double o2y = positionY[o2];
-        
+
         double o1m = mass[o1];
         double o2m = mass[o2];
-        
+
         // v'1y = v1y - 2*m2/(m1+m2) * dotProduct(o1, o2) / dotProduct(o1y, o1x, o2y, o2x) * (o1y-o2y)
         // v'2x = v2x - 2*m2/(m1+m2) * dotProduct(o2, o1) / dotProduct(o2x, o2y, o1x, o1y) * (o2x-o1x)
         // v'2y = v2y - 2*m2/(m1+m2) * dotProduct(o2, o1) / dotProduct(o2y, o2x, o1y, o1x) * (o2y-o1y)
@@ -372,17 +423,17 @@ public class SimulationLogicDouble extends Kernel implements SimulationLogic {
         velocityY[0] = o1.getVelocity().getY().doubleValue();
         velocityX[1] = o2.getVelocity().getX().doubleValue();
         velocityY[1] = o2.getVelocity().getY().doubleValue();
-        
+
         positionX[0] = o1.getX().doubleValue();
         positionY[0] = o1.getY().doubleValue();
         positionX[1] = o2.getX().doubleValue();
         positionY[1] = o2.getY().doubleValue();
-        
+
         mass[0] = o1.getMass().doubleValue();
         mass[1] = o2.getMass().doubleValue();
-        
+
         processTwoDimensionalCollision(0, 1, cor.doubleValue());
-        
+
         o1.setVelocity(new TripleNumber(New.num(velocityX[0]), New.num(velocityY[0]), ZERO));
         o2.setVelocity(new TripleNumber(New.num(velocityX[1]), New.num(velocityY[1]), ZERO));
     }

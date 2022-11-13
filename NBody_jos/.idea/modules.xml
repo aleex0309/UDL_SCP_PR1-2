@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/NBody_jos.iml" filepath="$PROJECT_DIR$/.idea/NBody_jos.iml" />
+      <module fileurl="file://$PROJECT_DIR$/jos-master/jos.iml" filepath="$PROJECT_DIR$/jos-master/jos.iml" />
     </modules>
   </component>
 </project>
