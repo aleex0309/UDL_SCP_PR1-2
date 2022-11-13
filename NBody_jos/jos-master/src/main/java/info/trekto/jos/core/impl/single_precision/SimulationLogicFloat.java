@@ -87,7 +87,7 @@ public class SimulationLogicFloat extends Kernel implements SimulationLogic {
 
     @Override
     public void run() {
-        calculateNewValues(getGlobalId());
+        calculateAllNewValues();
     }
 
     /**
@@ -167,10 +167,9 @@ public class SimulationLogicFloat extends Kernel implements SimulationLogic {
 
 
     public void calculateAllNewValues() {
-        SimulationProperties simulation = new SimulationProperties();
-        int numberOfThreads = simulation.getNumberOfThreads();
+        int numberOfThreads = SimulationProperties.getNumberOfThreads();
 
-        System.out.println("Number of FLOAT threads: " + numberOfThreads);
+        //System.out.println("Number of FLOAT threads: " + numberOfThreads);
 
         int particlesPerThread = positionX.length / numberOfThreads;
         int particlesLeft = positionX.length % numberOfThreads;

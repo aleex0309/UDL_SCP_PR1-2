@@ -165,10 +165,10 @@ public class SimulationLogicDouble extends Kernel implements SimulationLogic {
     }
 
     public void calculateAllNewValues() {
-        SimulationProperties simulation = new SimulationProperties();
-        int numberOfThreads = simulation.getNumberOfThreads();
 
-        System.out.println("Number of DOUBLE threads: " + numberOfThreads);
+        int numberOfThreads = SimulationProperties.getNumberOfThreads();
+
+        //System.out.println("Number of DOUBLE threads: " + numberOfThreads);
 
         int particlesPerThread = positionX.length / numberOfThreads;
         int particlesLeft = positionX.length % numberOfThreads;

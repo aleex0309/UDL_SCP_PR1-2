@@ -4,9 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c1805eb4-ef17-4030-959b-f0e779e2db8c" name="Changes" comment="Java-SimulationLogicDouble Working with threads">
-      <change beforePath="$PROJECT_DIR$/jos-master/src/main/java/info/trekto/jos/core/impl/double_precision/SimulationLogicDouble.java" beforeDir="false" afterPath="$PROJECT_DIR$/jos-master/src/main/java/info/trekto/jos/core/impl/double_precision/SimulationLogicDouble.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/jos-master/src/main/java/info/trekto/jos/core/impl/single_precision/SimulationLogicFloat.java" beforeDir="false" afterPath="$PROJECT_DIR$/jos-master/src/main/java/info/trekto/jos/core/impl/single_precision/SimulationLogicFloat.java" afterDir="false" />
+    <list default="true" id="c1805eb4-ef17-4030-959b-f0e779e2db8c" name="Changes" comment="Java- Double and Float Working with threads">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -71,7 +70,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1668338268785</updated>
-      <workItem from="1668338270090" duration="1468000" />
+      <workItem from="1668338270090" duration="2162000" />
     </task>
     <task id="LOCAL-00001" summary="Java-SimulationLogicDouble Working with threads">
       <created>1668338913769</created>
@@ -80,7 +79,14 @@
       <option name="project" value="LOCAL" />
       <updated>1668338913769</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Java- Double and Float Working with threads">
+      <created>1668340290777</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1668340290777</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -100,6 +106,7 @@
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
     <MESSAGE value="Java-SimulationLogicDouble Working with threads" />
-    <option name="LAST_COMMIT_MESSAGE" value="Java-SimulationLogicDouble Working with threads" />
+    <MESSAGE value="Java- Double and Float Working with threads" />
+    <option name="LAST_COMMIT_MESSAGE" value="Java- Double and Float Working with threads" />
   </component>
 </project>
