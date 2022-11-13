@@ -2,6 +2,8 @@ package info.trekto.jos.core.impl.single_precision;
 
 import com.aparapi.Kernel;
 import info.trekto.jos.core.SimulationLogic;
+import info.trekto.jos.core.impl.SimulationProperties;
+import info.trekto.jos.core.impl.double_precision.SimulationLogicDouble;
 import info.trekto.jos.core.model.SimulationObject;
 import info.trekto.jos.core.model.impl.TripleNumber;
 import info.trekto.jos.core.numbers.New;
@@ -146,10 +148,60 @@ public class SimulationLogicFloat extends Kernel implements SimulationLogic {
         }
     }
 
+    public class CalculateThread extends Thread{
+        public CalculateThread(int start, int end) {
+            this.start = start;
+            this.end = end;
+        }
+        int start;
+        int end;
+
+        @Override
+        public void run(){
+            for(int i = start; i < end; i++){
+                calculateNewValues(i);
+            }
+        }
+
+    }
+
 
     public void calculateAllNewValues() {
-        for (int i = 0; i < positionX.length; i++)
-            calculateNewValues(i);
+        SimulationProperties simulation = new SimulationProperties();
+        int numberOfThreads = simulation.getNumberOfThreads();
+
+        System.out.println("Number of FLOAT threads: " + numberOfThreads);
+
+        int particlesPerThread = positionX.length / numberOfThreads;
+        int particlesLeft = positionX.length % numberOfThreads;
+
+
+        SimulationLogicFloat.CalculateThread[] threads = new SimulationLogicFloat.CalculateThread[numberOfThreads];
+
+        int start = 0;
+        int end = particlesPerThread;
+
+        for (int i= 0; i < numberOfThreads ; i++){
+
+            if(particlesLeft > 0){
+                end++;
+                particlesLeft--;
+            }
+
+            threads[i] = new SimulationLogicFloat.CalculateThread(start, end);
+            threads[i].start();
+
+            start = end;
+            end = start + particlesPerThread;
+        }
+
+        for(int i = 0 ; i < numberOfThreads ; i++){
+            try {
+                threads[i].join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private void bounceFromScreenBorders(int i) {
