@@ -6,6 +6,8 @@
   <component name="ChangeListManager">
     <list default="true" id="c1805eb4-ef17-4030-959b-f0e779e2db8c" name="Changes" comment="Java- Double and Float Working with threads">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/jos-master/src/main/java/info/trekto/jos/core/impl/arbitrary_precision/SimulationLogicAP.java" beforeDir="false" afterPath="$PROJECT_DIR$/jos-master/src/main/java/info/trekto/jos/core/impl/arbitrary_precision/SimulationLogicAP.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/jos-master/src/main/java/info/trekto/jos/core/impl/double_precision/SimulationLogicDouble.java" beforeDir="false" afterPath="$PROJECT_DIR$/jos-master/src/main/java/info/trekto/jos/core/impl/double_precision/SimulationLogicDouble.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -33,15 +35,15 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ASKED_ADD_EXTERNAL_FILES": "true",
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "WebServerToolWindowFactoryState": "false",
-    "last_opened_file_path": "C:/Users/alexs/OneDrive - udl.cat/3r/Sistemes Conc i Paral/Prácticas/Pràctica 1-2/NBody_jos"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_ADD_EXTERNAL_FILES&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/alexs/OneDrive - udl.cat/3r/Sistemes Conc i Paral/Prácticas/Pràctica 1-2/NBody_jos&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager">
     <configuration name="Controller" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="info.trekto.jos.core.Controller" />
@@ -71,6 +73,10 @@
       <option name="presentableId" value="Default" />
       <updated>1668338268785</updated>
       <workItem from="1668338270090" duration="2162000" />
+      <workItem from="1668354102126" duration="5190000" />
+      <workItem from="1668360887255" duration="9000" />
+      <workItem from="1668374810528" duration="6799000" />
+      <workItem from="1668437492182" duration="4727000" />
     </task>
     <task id="LOCAL-00001" summary="Java-SimulationLogicDouble Working with threads">
       <created>1668338913769</created>
@@ -86,7 +92,14 @@
       <option name="project" value="LOCAL" />
       <updated>1668340290777</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="Java- Double and Float Working with threads">
+      <created>1668354543140</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1668354543140</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

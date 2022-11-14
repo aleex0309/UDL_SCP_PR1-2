@@ -2,6 +2,8 @@ package info.trekto.jos.core.impl.arbitrary_precision;
 
 import info.trekto.jos.core.Simulation;
 import info.trekto.jos.core.SimulationLogic;
+import info.trekto.jos.core.impl.SimulationProperties;
+import info.trekto.jos.core.impl.single_precision.SimulationLogicFloat;
 import info.trekto.jos.core.model.ImmutableSimulationObject;
 import info.trekto.jos.core.model.SimulationObject;
 import info.trekto.jos.core.model.impl.TripleNumber;
@@ -25,6 +27,19 @@ public class SimulationLogicAP implements SimulationLogic {
         this.simulation = simulation;
     }
 
+    public class ThreadCalculator extends Thread{
+        int start;
+        int end;
+        public ThreadCalculator(int start, int end){
+            this.start = start;
+            this.end = end;
+        }
+        @Override
+        public void run(){
+            //System.out.println("Thread started: " + start + " " + end);
+            calculateNewValues(start, end); //Calculate the values for the sub array
+        }
+    }
     public void calculateNewValues(int fromIndex, int toIndex) {
         Iterator<SimulationObject> newObjectsIterator = simulation.getAuxiliaryObjects().subList(fromIndex, toIndex).iterator();
 
@@ -64,7 +79,7 @@ public class SimulationLogicAP implements SimulationLogic {
              * Velocities are calculated having the accelerations of the objects at the beginning of the period,
              * and these accelerations are applied for time T. */
             newObject.setVelocity(calculateVelocity(oldObject));
-            
+
             /* Change the acceleration */
             newObject.setAcceleration(acceleration);
 
@@ -77,7 +92,36 @@ public class SimulationLogicAP implements SimulationLogic {
     }
 
     public void calculateAllNewValues() {
-        calculateNewValues(0, simulation.getObjects().size());
+
+        int numberOfThreads = SimulationProperties.getNumberOfThreads();
+        int taskPerThread = simulation.getObjects().size() / numberOfThreads;
+        int remainder = simulation.getObjects().size() % numberOfThreads; //Job to assign to the threads
+
+        ThreadCalculator[] threads = new ThreadCalculator[numberOfThreads];
+
+        int start = 0;
+        int end = taskPerThread;
+
+        for(int i = 0; i < numberOfThreads; i++){
+
+            if(remainder > 0){ //If there is a remainder, assign one more job to the thread
+                end++;
+                remainder--;
+            }
+
+            threads[i] = new ThreadCalculator(start, end); //Create the thread with the given sub array
+            threads[i].start();
+
+            start = end;
+            end =start + taskPerThread; //Calculate the next sub array
+        }
+        for(int i = 0; i < numberOfThreads; i++){
+            try {
+                threads[i].join(); //Wait for the thread to finish
+            } catch (InterruptedException e) {
+                e.printStackTrace(); //Error control
+            }
+        }
     }
 
     public void processCollisions(Simulation simulation) {
@@ -209,8 +253,8 @@ public class SimulationLogicAP implements SimulationLogic {
         Number totalMass = bigger.getMass().add(smaller.getMass());
 
         return new TripleNumber(totalImpulse.getX().divide(totalMass),
-                                totalImpulse.getY().divide(totalMass),
-                                totalImpulse.getZ().divide(totalMass));
+                totalImpulse.getY().divide(totalMass),
+                totalImpulse.getZ().divide(totalMass));
     }
 
     private void bounceFromScreenBorders(SimulationObject newObject) {
@@ -221,16 +265,16 @@ public class SimulationLogicAP implements SimulationLogic {
             if (newObject.getX().add(newObject.getRadius()).doubleValue() >= width / 2.0
                     || newObject.getX().subtract(newObject.getRadius()).doubleValue() <= -width / 2.0) {
                 TripleNumber velocity = new TripleNumber(newObject.getVelocity().getX().negate(),
-                                                      newObject.getVelocity().getY(),
-                                                      newObject.getVelocity().getZ());
+                        newObject.getVelocity().getY(),
+                        newObject.getVelocity().getZ());
                 newObject.setVelocity(velocity);
             }
 
             if (newObject.getY().add(newObject.getRadius()).doubleValue() >= height / 2.0
                     || newObject.getY().subtract(newObject.getRadius()).doubleValue() <= -height / 2.0) {
                 TripleNumber velocity = new TripleNumber(newObject.getVelocity().getX(),
-                                                      newObject.getVelocity().getY().negate(),
-                                                      newObject.getVelocity().getZ());
+                        newObject.getVelocity().getY().negate(),
+                        newObject.getVelocity().getZ());
                 newObject.setVelocity(velocity);
             }
         }
@@ -276,21 +320,21 @@ public class SimulationLogicAP implements SimulationLogic {
         Number newAccelerationZ = acceleration.getZ().add(force.getZ().divide(object.getMass()));
         return new TripleNumber(newAccelerationX, newAccelerationY, newAccelerationZ);
     }
-    
+
     public void processTwoDimensionalCollision(SimulationObject o1, SimulationObject o2, Number cor) {
         Number v1x = o1.getVelocity().getX();
         Number v1y = o1.getVelocity().getY();
         Number v2x = o2.getVelocity().getX();
         Number v2y = o2.getVelocity().getY();
-        
+
         Number o1x = o1.getX();
         Number o1y = o1.getY();
         Number o2x = o2.getX();
         Number o2y = o2.getY();
-        
+
         Number o1m = o1.getMass();
         Number o2m = o2.getMass();
-        
+
         // v'1y = v1y - 2*m2/(m1+m2) * dotProduct(o1, o2) / dotProduct(o1y, o1x, o2y, o2x) * (o1y-o2y)
         // v'2x = v2x - 2*m2/(m1+m2) * dotProduct(o2, o1) / dotProduct(o2x, o2y, o1x, o1y) * (o2x-o1x)
         // v'2y = v2y - 2*m2/(m1+m2) * dotProduct(o2, o1) / dotProduct(o2y, o2x, o1y, o1x) * (o2y-o1y)
@@ -299,7 +343,7 @@ public class SimulationLogicAP implements SimulationLogic {
         Number o1NewVelocityY = calculateVelocity(v1y, v1x, v2y, v2x, o1y, o1x, o2y, o2x, o1m, o2m, cor);
         Number o2NewVelocityX = calculateVelocity(v2x, v2y, v1x, v1y, o2x, o2y, o1x, o1y, o2m, o1m, cor);
         Number o2NewVelocityY = calculateVelocity(v2y, v2x, v1y, v1x, o2y, o2x, o1y, o1x, o2m, o1m, cor);
-        
+
         o1.setVelocity(new TripleNumber(o1NewVelocityX, o1NewVelocityY, ZERO));
         o2.setVelocity(new TripleNumber(o2NewVelocityX, o2NewVelocityY, ZERO));
     }

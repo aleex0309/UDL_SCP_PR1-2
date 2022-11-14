@@ -157,7 +157,7 @@ public class SimulationLogicDouble extends Kernel implements SimulationLogic {
 
         @Override
         public void run(){
-            for(int i = start; i < end; i++){
+            for(int i = start; i < end; i++){ //for each object call the method (range of the thread)
                 calculateNewValues(i);
             }
         }
@@ -186,7 +186,7 @@ public class SimulationLogicDouble extends Kernel implements SimulationLogic {
                 particlesLeft--;
             }
 
-            threads[i] = new CalculateThread(start, end);
+            threads[i] = new CalculateThread(start, end);// call the thread w
             threads[i].start();
 
             start = end;
