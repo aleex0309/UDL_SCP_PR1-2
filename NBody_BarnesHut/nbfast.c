@@ -10,7 +10,7 @@
     #include<GLFW/glfw3.h>
 #endif
 
-// Macros to make code a little easier to understand because for speedup reasons, I'll use only 1D arrays
+// Macros to make code a little bit easier to understand because for speedup reasons, I'll use only 1D arrays
 #define PX(i) (3*i+1)
 #define PY(i) (3*i+2)
 #define MASS(i) (3*i+3)
@@ -20,12 +20,12 @@
 #define AX(i) (4*i+2)
 #define AY(i) (4*i+3)
 
-#define numThreads 8
-
 double G=0.0001;
 double dt=0.005;
 double rcutoff=0.35;
 double rlimit=0.03;
+
+
 
 struct Node{
     struct Node *children[4];
@@ -45,15 +45,14 @@ struct Node{
 };
 
 struct ThreadData { // Struct to pass data to threads
-    struct Node *tree;
-    double *sharedBuff;
+    struct Node* tree;
+    double *shrdBuff;
     double *localBuff;
     int *indexes; // Indexes of particles in the local buffer
-    int ranges[2]; // Start and end of range
-    int nLocal;
-    int nShared;
-};
-typedef struct ThreadData threadData, *ThreadDataPointer; // ThreadDataPointer is a pointer to a ThreadData struct.
+    int start; // Start and end of range
+    int end;
+
+}; //typedef struct ThreadData threadData, *ThreadDataPointer; // ThreadDataPointer is a pointer to a ThreadData struct.
 
 void buildTree(struct Node* node, double* shrdBuff, int *indexes, int n){
     if(n==1){ //This is an external node!
@@ -192,6 +191,26 @@ void calculateForce(struct Node *tree, double *shrdBuff, double *localBuff, int 
     }
 }
 
+void CalculateForcesConcurrent(int *indexes, double *sharedBuff, double *localBuff, struct Node* tree, int start, int end){
+    //Set initial accelerations to zero
+
+    for(int i = start; i < end; i++){
+        //First we make them zero in both directions
+        localBuff[AX(indexes[i])]=0;
+        localBuff[AY(indexes[i])]=0;
+        //Then we calculate the force
+        int s;
+        for(s=0;s<4;s++){
+            if(tree->children[s]!=NULL)
+                calculateForce(tree->children[s], sharedBuff,localBuff,indexes[i]);
+        }
+    }
+}
+
+void CalculateForcesThreads(struct ThreadData *toDo){
+    CalculateForcesConcurrent(toDo->indexes, toDo->shrdBuff, toDo->localBuff, toDo->tree, toDo->start, toDo->end);
+}
+
 void moveParticle(double *shrdBuff, double *localBuff, int index){
     //Unprecise but fast euler method for solving the time differential equation
 	double oldX=shrdBuff[PX(index)];
@@ -319,34 +338,18 @@ void ShowWritePartialResults(int count,int nOriginal, int nShared, int *indexes,
     }
 }
 
-void *CalculateForcePerParticle(threadData threadPointer){
-    // We calculate the forces per particle
-    for (int i=threadPointer.ranges[0];i<=threadPointer.ranges[1];i++){
-        threadPointer.localBuff[AX(threadPointer.indexes[i])]=0;
-        threadPointer.localBuff[AY(threadPointer.indexes[i])]=0;
-        int s;
-        for(s=0;s<4;s++){
-            //Recursively calculate accelerations
-            if(threadPointer.tree->children[s]!=NULL)
-                calculateForce(threadPointer.tree->children[s],threadPointer.sharedBuff,threadPointer.localBuff,threadPointer.indexes[i]);
-        }
-    }
-    return NULL;
-}
-
-
 int main(int argc, char *argv[]){
-    int nShared=500;
-	int steps=100;
     double *sharedBuff;
     double *localBuff;
-    double *radius;
     int *indexes, i;
+    int nShared=500;
+    int steps=100;
+    double *radius;
     char filename[100];
+    int numThreads = 1;
 
     printf("NBody with %d arguments.\n",argc);
     StartTime = clock();
-
 
 	if(argc>1){
 		nShared=atoi(argv[1]);
@@ -354,14 +357,21 @@ int main(int argc, char *argv[]){
 			steps=atoi(argv[2]);
 		}
 	}
+    /*Asignacio i creacio d'array de threads segons parametres/DEFAULT*/
+    if(argc > 3){
+        numThreads = atoi(argv[3]);
+        printf("Numero de threads: %d\n", numThreads);
+    }
 
-    if(argc>3 && access(argv[3], F_OK) == 0)
+    if(argc>4 && access(argv[4], F_OK) == 0)
     {
         printf("Read file..\n");
         /* Read bodies initial state from file */
-        ReadGalaxyFile(argv[3], &nShared, &indexes, &sharedBuff);
+        ReadGalaxyFile(argv[4], &nShared, &indexes, &sharedBuff);
         argc--;
     }
+
+
     else
     {   /* Inicialize the bodies randomly */
 
@@ -404,6 +414,7 @@ int main(int argc, char *argv[]){
 
     //This is the main node, the one that holds the first four children nodes that make the calculation zone
     struct Node* tree = malloc(sizeof *tree);
+
 	//LLX is the x coordinate of the Low Left corner
     tree->LLX=0;
 	//This is the y coordinate..
@@ -421,9 +432,11 @@ int main(int argc, char *argv[]){
     SaveGalaxyFile(filename, nShared, indexes, sharedBuff);
 
     int count=1;
+
 	//If we need to visualize
 #ifdef D_GLFW_SUPPORT
-	if(argc>3){
+	if(strcmp("./NBody_GUI", argv[0]) == 0){
+        printf("GUI_process\n");
 		//If you only care about the algorithm, skip until next comment
 	    if(!glfwInit()){
     	    printf("Failed to start GLFW\n");
@@ -442,52 +455,27 @@ int main(int argc, char *argv[]){
     	glOrtho(0,1,0,1,0,1);
     	glMatrixMode(GL_MODELVIEW);
 
-        pthread_t CalculateForcePerParticleTids[numThreads]; // = malloc(sizeof(pthread_t)*numThreads); // Allocate memory for the threads
-        ThreadDataPointer threadAtribs = malloc(sizeof(ThreadDataPointer)*numThreads); // Array of thread data pointers
-
-        int residue = nLocal % numThreads; // Calculate the residue of the division
-        int minRange, maxRange; // The minimum and maximum range of the indexes that each thread will calculate
-
     	while(!glfwWindowShouldClose(window) && count<=steps){
         	glClear(GL_COLOR_BUFFER_BIT);
 
 			double t=glfwGetTime();
 			//We build the tree, which needs a pointer to the initial node, the buffer holding position and mass of the particles, indexes and number of particles
         	buildTree(tree,sharedBuff,indexes,nShared);
-            //threadAtribs = malloc(sizeof(threadData)*numThreads); // Allocate memory for the thread data
         	//Now that it is built, we calculate the forces per particle
-            for (i=0; i<numThreads; i++) {
-                if (i = 0) {
-                    minRange = i * (nLocal / numThreads); // Calculate the minimum range for this thread
-                    maxRange = (i + 1) * (nLocal / numThreads); // Calculate the maximum range for this thread
-                } else {
-                    minRange = maxRange; // Calculate the minimum range for this thread
-                    maxRange = minRange + (nLocal / numThreads); // Calculate the maximum range for this thread
-                }
-
-                if (residue > 0) {
-                    residue--;
-                    maxRange++;
-                }
-
-
-                threadAtribs[i].tree = tree;
-                threadAtribs[i].sharedBuff = sharedBuff;
-                threadAtribs[i].localBuff = localBuff;
-                threadAtribs[i].ranges[0] = minRange;
-                threadAtribs[i].ranges[1] = maxRange;
-                threadAtribs[i].indexes = indexes;
-                threadAtribs[i].nLocal = nLocal;
-                threadAtribs[i].nShared = nShared;
-                pthread_create(&CalculateForcePerParticleTids[i], NULL, (void *(*) (void *)) CalculateForcePerParticle, (void *) &threadAtribs[i]);
-            }
-            for (int j=0; j<numThreads; j++) {
-                pthread_join(CalculateForcePerParticleTids[j], NULL);
-            }
-            for (int i=0; i<nLocal; i++) {
-                moveParticle(sharedBuff,localBuff,indexes[i]);
-            	//Kick out particle if it went out of the box (0,1)x(0,1)
-				if(sharedBuff[PX(indexes[i])]<=0 || sharedBuff[PX(indexes[i])]>=1 || sharedBuff[PY(indexes[i])] <=0 || sharedBuff[PY(indexes[i])] >= 1){
+			for(i=0;i<nLocal;i++){
+				//First we make them zero in both directions
+            	localBuff[AX(indexes[i])]=0;
+            	localBuff[AY(indexes[i])]=0;
+            	int s;
+            	for(s=0;s<4;s++){
+					//Now, for each children that is not empty, we calculate the force (the calculateForce() function is recursive)
+                	if(tree->children[s]!=NULL)
+                		calculateForce(tree->children[s],sharedBuff,localBuff,indexes[i]);
+            	}
+				//We calculate the new position of the particles according to the accelerations
+            	moveParticle(sharedBuff,localBuff,indexes[i]);
+				//This is to kick out particles that escape the rectangle (0,1)x(0,1), so we just delete the index.
+            	if(sharedBuff[PX(indexes[i])]<=0 || sharedBuff[PX(indexes[i])]>=1 || sharedBuff[PY(indexes[i])] <=0 || sharedBuff[PY(indexes[i])] >= 1){
                 	int r;
                 	nLocal--;
                 	nShared--;
@@ -496,7 +484,7 @@ int main(int argc, char *argv[]){
                 	}
                 	i--;
             	}
-            }
+        	}
 
             SaveGalaxy(count, nShared, indexes, sharedBuff);
 
@@ -525,38 +513,73 @@ int main(int argc, char *argv[]){
 #endif
 		//This is the pure algorithm, without visualization
 		//system("mkdir res");
-    	while(count<=steps){
-			//First we build the tree
+
+        while(count<=steps){
+
+            pthread_t *CalculateForcePerParticleTids = malloc(sizeof(pthread_t) * numThreads);
+            struct ThreadData *threadAtribs = malloc(sizeof(struct ThreadData) * numThreads);
+
+            //First we build the tree
         	buildTree(tree,sharedBuff,indexes,nShared);
-        	for(i=0;i<nLocal;i++){
-				//Set initial accelerations to zero
-            	localBuff[AX(indexes[i])]=0;
-            	localBuff[AY(indexes[i])]=0;
-            	int s;
-            	for(s=0;s<4;s++){
-					//Recursively calculate accelerations
-                	if(tree->children[s]!=NULL)
-                		calculateForce(tree->children[s],sharedBuff,localBuff,indexes[i]);
-            	}
-				//Calculate new position
-            	moveParticle(sharedBuff,localBuff,indexes[i]);
+            //Now that it is built, we calculate the forces per particle
+            int ptxThread = nLocal / numThreads;
+            int residue = nLocal % numThreads;
+
+        	for(int i = 0; i < numThreads; i++){
+                if(i == 0){
+                    threadAtribs[i].start = 0;
+                    threadAtribs[i].end = (i+1) * ptxThread;
+                }else{
+                    threadAtribs[i].start = threadAtribs[i-1].end;
+                    threadAtribs[i].end = threadAtribs[i].start + ptxThread;
+                }              
+                if(residue > 0){
+                    threadAtribs[i].end++;
+                    residue--;
+                }
+
+                threadAtribs[i].indexes = indexes;
+                threadAtribs[i].localBuff = localBuff;
+                threadAtribs[i].shrdBuff = sharedBuff;
+                threadAtribs[i].tree = tree;
+              
+                if ((pthread_create(&CalculateForcePerParticleTids[i], NULL, (void *(*)(void *)) CalculateForcesThreads, (void*) &threadAtribs[i]) != 0)) {
+                    pthread_cancel(CalculateForcePerParticleTids[i]);
+                    perror("Error creating thread");
+                    exit(1);
+                }
+        	}
+
+            for(int i=0; i <= numThreads-1; i++){
+                if(pthread_join(CalculateForcePerParticleTids[i], NULL)){
+                    perror("Error join Hilos\n");
+                    exit(1);
+                }
+            }
+
+            for(int i=0; i < nLocal; i++){
+                 //Calculate new position
+            	moveParticle(sharedBuff, localBuff, indexes[i]);
             	//Kick out particle if it went out of the box (0,1)x(0,1)
-				if(sharedBuff[PX(indexes[i])]<=0 || sharedBuff[PX(indexes[i])]>=1 || sharedBuff[PY(indexes[i])] <=0 || sharedBuff[PY(indexes[i])] >= 1){
-                	int r;
+                if(sharedBuff[PX(indexes[i])]<=0 || sharedBuff[PX(indexes[i])]>=1 || sharedBuff[PY(indexes[i])] <=0 || sharedBuff[PY(indexes[i])] >= 1){
+                    int r;
                 	nLocal--;
                 	nShared--;
                 	for(r=i;r<nLocal;r++){
-                    	indexes[r]=indexes[r+1];
+                    	indexes[r]= indexes[r+1];
                 	}
                 	i--;
-            	}
-        	}
-			
+                }
+            }
 			//To be able to store the positions of the particles
             ShowWritePartialResults(count,nOriginal, nShared, indexes, sharedBuff);
             //We advance one step
 			count++;
+            free(CalculateForcePerParticleTids);
+            free(threadAtribs);
 		}
+        
+        
 #ifdef D_GLFW_SUPPORT
 	}
 #endif
@@ -573,6 +596,7 @@ int main(int argc, char *argv[]){
 	free(localBuff);
 	free(radius);
 	free(indexes);
+        
 
     return 0;
 }
