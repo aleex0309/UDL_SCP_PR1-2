@@ -1,5 +1,11 @@
 package info.trekto.jos.core.impl.double_precision;
-
+/* ---------------------------------------------------------------
+Práctica 1.
+Código fuente : nbfast.c
+Grau Informàtica
+Y2386362B - Alexandru Cristian Stoia
+48054396J - Pol Triquell Lombardo
+--------------------------------------------------------------- */
 import com.aparapi.Kernel;
 import info.trekto.jos.core.SimulationLogic;
 import info.trekto.jos.core.impl.SimulationProperties;

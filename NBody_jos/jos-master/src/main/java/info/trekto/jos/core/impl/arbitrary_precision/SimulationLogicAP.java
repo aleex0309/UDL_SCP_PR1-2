@@ -19,12 +19,15 @@ import static info.trekto.jos.core.numbers.NumberFactoryProxy.*;
 /**
  * @author Trayan Momkov
  * 2016-Mar-6
- *
- * Modified by:
- * @author Alexandru Stoia
- * @author Pol Triquell
- * 2022-Nov-14
  */
+
+/* ---------------------------------------------------------------
+Práctica 1.
+Código fuente : nbfast.c
+Grau Informàtica
+Y2386362B - Alexandru Cristian Stoia
+48054396J - Pol Triquell Lombardo
+--------------------------------------------------------------- */
 public class SimulationLogicAP implements SimulationLogic {
     private final Simulation simulation;
 

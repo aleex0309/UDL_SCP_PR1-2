@@ -1,3 +1,11 @@
+/* ---------------------------------------------------------------
+Práctica 1.
+Código fuente : nbfast.c
+Grau Informàtica
+Y2386362B - Alexandru Cristian Stoia
+48054396J - Pol Triquell Lombardo
+--------------------------------------------------------------- */
+
 #include<stdio.h>
 #include<stdlib.h>
 #include<math.h>
@@ -5,6 +13,7 @@
 #include <stdio.h>
 #include<unistd.h>
 #include <pthread.h>
+#include <string.h>
 
 #ifdef D_GLFW_SUPPORT
     #include<GLFW/glfw3.h>
@@ -46,8 +55,8 @@ struct Node{
 
 struct ThreadData { // Struct to pass data to threads
     struct Node* tree;
-    double *shrdBuff;
-    double *localBuff;
+    double *shrdBuff; // Shared buffer
+    double *localBuff; // Local buffer
     int *indexes; // Indexes of particles in the local buffer
     int start; // Start and end of range
     int end;
@@ -459,31 +468,61 @@ int main(int argc, char *argv[]){
         	glClear(GL_COLOR_BUFFER_BIT);
 
 			double t=glfwGetTime();
+
+            pthread_t *CalculateForcePerParticleTids = malloc(sizeof(pthread_t) * numThreads);
+            struct ThreadData *threadAtribs = malloc(sizeof(struct ThreadData) * numThreads);
+
 			//We build the tree, which needs a pointer to the initial node, the buffer holding position and mass of the particles, indexes and number of particles
         	buildTree(tree,sharedBuff,indexes,nShared);
         	//Now that it is built, we calculate the forces per particle
-			for(i=0;i<nLocal;i++){
-				//First we make them zero in both directions
-            	localBuff[AX(indexes[i])]=0;
-            	localBuff[AY(indexes[i])]=0;
-            	int s;
-            	for(s=0;s<4;s++){
-					//Now, for each children that is not empty, we calculate the force (the calculateForce() function is recursive)
-                	if(tree->children[s]!=NULL)
-                		calculateForce(tree->children[s],sharedBuff,localBuff,indexes[i]);
-            	}
-				//We calculate the new position of the particles according to the accelerations
-            	moveParticle(sharedBuff,localBuff,indexes[i]);
-				//This is to kick out particles that escape the rectangle (0,1)x(0,1), so we just delete the index.
-            	if(sharedBuff[PX(indexes[i])]<=0 || sharedBuff[PX(indexes[i])]>=1 || sharedBuff[PY(indexes[i])] <=0 || sharedBuff[PY(indexes[i])] >= 1){
-                	int r;
-                	nLocal--;
-                	nShared--;
-                	for(r=i;r<nLocal;r++){
-                    	indexes[r]=indexes[r+1];
-                	}
-                	i--;
-            	}
+
+            int ptxThread = nLocal / numThreads;
+            int residue = nLocal % numThreads;
+
+        	for(int i = 0; i < numThreads; i++){
+                if(i == 0){
+                    threadAtribs[i].start = 0;
+                    threadAtribs[i].end = (i+1) * ptxThread;
+                }else{
+                    threadAtribs[i].start = threadAtribs[i-1].end;
+                    threadAtribs[i].end = threadAtribs[i].start + ptxThread;
+                }
+                if(residue > 0){
+                    threadAtribs[i].end++;
+                    residue--;
+                }
+
+                threadAtribs[i].indexes = indexes;
+                threadAtribs[i].localBuff = localBuff;
+                threadAtribs[i].shrdBuff = sharedBuff;
+                threadAtribs[i].tree = tree;
+
+                if ((pthread_create(&CalculateForcePerParticleTids[i], NULL, (void *(*)(void *)) CalculateForcesThreads, (void*) &threadAtribs[i]) != 0)) {
+                    pthread_cancel(CalculateForcePerParticleTids[i]);
+                    perror("Error creating thread");
+                    exit(1);
+                }
+        	}
+
+            for(int i=0; i <= numThreads-1; i++){
+                if(pthread_join(CalculateForcePerParticleTids[i], NULL)){
+                    perror("Error join Hilos\n");
+                    exit(1);
+                }
+            }
+            for(int i=0; i < nLocal; i++){
+                //We calculate the new position of the particles according to the accelerations
+                moveParticle(sharedBuff,localBuff,indexes[i]);
+                //This is to kick out particles that escape the rectangle (0,1)x(0,1), so we just delete the index.
+                if(sharedBuff[PX(indexes[i])]<=0 || sharedBuff[PX(indexes[i])]>=1 || sharedBuff[PY(indexes[i])] <=0 || sharedBuff[PY(indexes[i])] >= 1){
+                    int r;
+                    nLocal--;
+                    nShared--;
+                    for(r=i;r<nLocal;r++){
+                        indexes[r]=indexes[r+1];
+                    }
+                    i--;
+                }
         	}
 
             SaveGalaxy(count, nShared, indexes, sharedBuff);
@@ -516,22 +555,21 @@ int main(int argc, char *argv[]){
 
         while(count<=steps){
 
-            pthread_t *CalculateForcePerParticleTids = malloc(sizeof(pthread_t) * numThreads);
-            struct ThreadData *threadAtribs = malloc(sizeof(struct ThreadData) * numThreads);
+            pthread_t *CalculateForcePerParticleTids = malloc(sizeof(pthread_t) * numThreads); //Array of threads
+            struct ThreadData *threadAtribs = malloc(sizeof(struct ThreadData) * numThreads); //Array of thread attributes
 
             //First we build the tree
         	buildTree(tree,sharedBuff,indexes,nShared);
             //Now that it is built, we calculate the forces per particle
-            int ptxThread = nLocal / numThreads;
-            int residue = nLocal % numThreads;
+            int residue = (nLocal % numThreads);
 
         	for(int i = 0; i < numThreads; i++){
                 if(i == 0){
                     threadAtribs[i].start = 0;
-                    threadAtribs[i].end = (i+1) * ptxThread;
+                    threadAtribs[i].end = (nLocal / numThreads);
                 }else{
                     threadAtribs[i].start = threadAtribs[i-1].end;
-                    threadAtribs[i].end = threadAtribs[i].start + ptxThread;
+                    threadAtribs[i].end = threadAtribs[i].start + (nLocal / numThreads);
                 }              
                 if(residue > 0){
                     threadAtribs[i].end++;
