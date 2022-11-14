@@ -19,6 +19,11 @@ import static info.trekto.jos.core.numbers.NumberFactoryProxy.*;
 /**
  * @author Trayan Momkov
  * 2016-Mar-6
+ *
+ * Modified by:
+ * @author Alexandru Stoia
+ * @author Pol Triquell
+ * 2022-Nov-14
  */
 public class SimulationLogicAP implements SimulationLogic {
     private final Simulation simulation;
